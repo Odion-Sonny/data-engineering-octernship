@@ -1,3 +1,242 @@
+# DuckMart User Segmentation System
+
+## Implementation Overview
+
+This project implements a scalable user segmentation system for DuckMart, a fictional e-commerce platform. The system allows for flexible user segmentation based on user attributes and behavioral events through a REST API.
+
+### Key Features
+- **Dummy Data Generation**: 10,000 users and 50,000 events with realistic attributes
+- **DuckDB Integration**: Efficient data storage and querying
+- **Flexible Segmentation API**: JSON-based segmentation criteria with SQL generation
+- **Multiple Filter Types**: User attributes, event-based filters, and time-range filtering
+- **Performance Optimized**: Indexed queries for fast segmentation
+
+### Project Structure
+```
+├── generate_dummy_data.py      # Generate sample data
+├── database_setup.py           # Database schema and data loading
+├── segmentation_queries.py     # Example segmentation queries
+├── segmentation_api.py         # FastAPI backend service
+├── test_api.py                 # API testing script
+├── requirements.txt            # Python dependencies
+├── user_attributes.csv         # Generated user data
+├── user_events.csv            # Generated event data
+└── duckmart.db                # DuckDB database file
+```
+
+## Setup Instructions
+
+### Prerequisites
+- Python 3.8+
+- pip package manager
+
+### Installation
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Generate dummy data:
+   ```bash
+   python generate_dummy_data.py
+   ```
+
+4. Set up database and load data:
+   ```bash
+   python database_setup.py
+   ```
+
+5. Run example segmentation queries:
+   ```bash
+   python segmentation_queries.py
+   ```
+
+6. Start the API server:
+   ```bash
+   python segmentation_api.py
+   ```
+
+7. Test the API (in another terminal):
+   ```bash
+   python test_api.py
+   ```
+
+## Database Schema
+
+### User Attributes Table
+```sql
+CREATE TABLE user_attributes (
+    user_id INTEGER PRIMARY KEY,
+    name VARCHAR,
+    age INTEGER,
+    gender VARCHAR,
+    location VARCHAR,
+    signup_date DATE,
+    subscription_plan VARCHAR,
+    device_type VARCHAR
+)
+```
+
+### User Events Table
+```sql
+CREATE TABLE user_events (
+    user_id INTEGER,
+    event_name VARCHAR,
+    timestamp TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user_attributes(user_id)
+)
+```
+
+## Required Segmentation Queries
+
+### 1. Age-Based Segmentation (25-34 years)
+```sql
+SELECT user_id, name, age 
+FROM user_attributes 
+WHERE age >= 25 AND age <= 34
+ORDER BY user_id
+```
+**Result**: 1,915 users in this age group
+
+### 2. Location + Event Segmentation (California + LOGIN)
+```sql
+SELECT DISTINCT ua.user_id, ua.name, ua.location
+FROM user_attributes ua
+INNER JOIN user_events ue ON ua.user_id = ue.user_id
+WHERE ua.location = 'California' 
+AND ue.event_name = 'LOGIN'
+ORDER BY ua.user_id
+```
+**Result**: 390 California users who have logged in
+
+## Segmentation API Specification
+
+### JSON Payload Structure
+
+The API accepts segmentation criteria in the following JSON format:
+
+```json
+{
+    "user_filters": [
+        {
+            "field": "age",
+            "operator": "gte", 
+            "value": 25
+        }
+    ],
+    "event_filters": [
+        {
+            "event_name": "LOGIN",
+            "operator": "gte",
+            "count": 1,
+            "time_range_days": 30
+        }
+    ],
+    "logic_operator": "AND",
+    "limit": 1000
+}
+```
+
+### Supported Operators
+
+#### User Filter Operators
+- `eq`: equals
+- `ne`: not equals  
+- `gt`: greater than
+- `gte`: greater than or equal
+- `lt`: less than
+- `lte`: less than or equal
+- `in`: value in list
+- `not_in`: value not in list
+- `like`: pattern matching
+
+#### Event Filter Operators
+- `eq`: exact count
+- `ne`: not equal count
+- `gt`: greater than count
+- `gte`: greater than or equal count
+- `lt`: less than count
+- `lte`: less than or equal count
+
+### API Endpoints
+
+#### POST /segment
+Main segmentation endpoint that accepts JSON criteria and returns user IDs.
+
+**Request Example**:
+```json
+{
+    "user_filters": [
+        {"field": "location", "operator": "eq", "value": "California"}
+    ],
+    "event_filters": [
+        {"event_name": "LOGIN", "operator": "gte", "count": 1}
+    ],
+    "logic_operator": "AND"
+}
+```
+
+**Response Example**:
+```json
+{
+    "user_ids": [25, 32, 54, 63, 81, ...],
+    "total_count": 390,
+    "filters_applied": {
+        "user_filters": [...],
+        "event_filters": [...], 
+        "logic_operator": "AND"
+    }
+}
+```
+
+#### GET /examples
+Returns example JSON payloads for common segmentation scenarios.
+
+#### GET /health
+Health check endpoint.
+
+### Example Use Cases
+
+1. **Age Targeting**: Users aged 25-34
+2. **Geographic + Behavioral**: California users who logged in
+3. **Subscription Targeting**: Premium users with recent purchases
+4. **Cart Abandonment**: Users who added items but never purchased
+5. **Device Segmentation**: Mobile users with specific behaviors
+
+## Performance Considerations
+
+- **Database Indexes**: Created on frequently queried fields (user_id, age, location, event_name)
+- **Query Optimization**: Efficient JOIN operations and filtering
+- **Limit Controls**: Configurable result limits to prevent large result sets
+- **Connection Management**: Proper database connection handling
+
+## Design Decisions
+
+1. **DuckDB Choice**: Fast analytical queries, embedded database, excellent for read-heavy workloads
+2. **FastAPI Framework**: Modern, fast, automatic API documentation
+3. **Pydantic Validation**: Type safety and request validation
+4. **Flexible JSON Schema**: Extensible design for future filter types
+5. **SQL Generation**: Dynamic SQL building with injection protection
+
+## Testing
+
+The project includes comprehensive testing:
+- **Data Generation**: Realistic sample data with proper distributions
+- **Query Validation**: Verification of segmentation results
+- **API Testing**: Automated tests for various segmentation scenarios
+- **Performance Testing**: Query execution time monitoring
+
+## Assumptions & Limitations
+
+- User IDs are unique integers
+- Event timestamps are stored in UTC
+- Maximum result limit of 1000 users per request (configurable)
+- Field names are validated to prevent SQL injection
+- Time-based filters use days as the minimum unit
+
+---
+
 ## Houseware
 
 ### Company information 
