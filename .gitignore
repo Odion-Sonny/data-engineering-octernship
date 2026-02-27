@@ -89,4 +89,4 @@ user_events.csv
 # Temporary files
 tmp/
 temp/
-.tmp
+.tmpserver.pid
